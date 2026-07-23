@@ -1,9 +1,9 @@
 import math
-from dataclasses import dataclass
+
+from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
 
 
-@dataclass(frozen=True)
-class DoransRing:
+class DoransRing(metaclass=DataReadOnlyMeta):
     cost: int = 400
     ap: int = 18
     hp: int = 90
@@ -16,15 +16,16 @@ class DoransRing:
     helping_hand_minion_dmg: int = 5
 
 
-DORANS_RING = DoransRing()
-
-
-def drain_mana_regen(item: DoransRing, in_champion_combat: bool) -> int:
+def drain_mana_regen(in_champion_combat: bool) -> int:
     """Mana restored per second from Drain. Doubles for 5s after damaging a champ."""
-    return item.drain_active_mana_per_sec if in_champion_combat else item.drain_mana_per_sec
+    return (
+        DoransRing.drain_active_mana_per_sec
+        if in_champion_combat
+        else DoransRing.drain_mana_per_sec
+    )
 
 
-def drain_heal_per_sec(item: DoransRing, in_champion_combat: bool) -> int:
+def drain_heal_per_sec(in_champion_combat: bool) -> int:
     """For manaless champions: floor(value * 45%) heal per second instead of mana."""
-    value = drain_mana_regen(item, in_champion_combat)
-    return math.floor(value * item.drain_manaless_heal_pct / 100)
+    value = drain_mana_regen(in_champion_combat)
+    return math.floor(value * DoransRing.drain_manaless_heal_pct / 100)

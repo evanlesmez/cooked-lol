@@ -1,12 +1,10 @@
-from dataclasses import dataclass
-
-from cooked_lol.systems import Stat
+from cooked_lol.systems.systems import SpellRank, Stat, validate_rank
+from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
 
 
 # Source: in-game stats panel (level 1-20 range).
 # Verified: stat_at_level(s, 20) reproduces the displayed L20 values exactly.
-@dataclass(frozen=True)
-class KatarinaStats:
+class KatarinaStats(metaclass=DataReadOnlyMeta):
     hp: Stat = Stat(672, 108)
     hp5: Stat = Stat(7.5, 0.7)
     ar: Stat = Stat(32, 4.7)
@@ -20,23 +18,36 @@ class KatarinaStats:
     crit_dmg_pct: float = 200
 
 
-KATARINA = KatarinaStats()
-
-
 _DAGGER_BASE_BY_LEVEL = (
-    68, 72, 77, 82, 89, 96, 103, 112, 121, 131,
-    142, 154, 166, 180, 194, 208, 224, 240, 257, 275,
+    68,
+    72,
+    77,
+    82,
+    89,
+    96,
+    103,
+    112,
+    121,
+    131,
+    142,
+    154,
+    166,
+    180,
+    194,
+    208,
+    224,
+    240,
+    257,
+    275,
 )
 
 
 def dagger_damage(level: int, bonus_ad: float, ap: float) -> float:
     """
-    Pre-mitigation magic damage from a single dagger pickup (Sinister Steel).
-    Does not include on-hit effects - those need to be added per item.
+    Raw damage from a single dagger pickup (Sinister Steel).
     """
     base = _DAGGER_BASE_BY_LEVEL[level - 1]
 
-    # AP ratio: 70 / 80 / 90 / 100% at level breakpoints 1 / 6 / 11 / 16.
     if level >= 16:
         ap_ratio = 1.00
     elif level >= 11:
@@ -47,3 +58,13 @@ def dagger_damage(level: int, bonus_ad: float, ap: float) -> float:
         ap_ratio = 0.70
 
     return base + 0.60 * bonus_ad + ap_ratio * ap
+
+
+def bouncing_blade(rank: SpellRank, ap: float) -> float:
+    validate_rank(rank)
+    return 45 + 35 * rank + 0.4 * ap
+
+
+def shunpo(rank: SpellRank, bonus_ad: float, ap: float) -> float:
+    validate_rank(rank)
+    return 10 + (10 * rank) + 0.4 * bonus_ad + 0.25 * ap

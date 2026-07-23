@@ -1,8 +1,7 @@
-from dataclasses import dataclass
+from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
 
 
-@dataclass(frozen=True)
-class DarkSeal:
+class DarkSeal(metaclass=DataReadOnlyMeta):
     cost: int = 350
     ap: int = 15
     hp: int = 50
@@ -14,10 +13,7 @@ class DarkSeal:
     glory_max_stacks: int = 10
 
 
-DARK_SEAL = DarkSeal()
-
-
-def ap_with_glory(item: DarkSeal, stacks: int) -> int:
+def ap_with_glory(stacks: int) -> int:
     """Total AP from item including current Glory stacks (capped at max)."""
-    capped = min(max(stacks, 0), item.glory_max_stacks)
-    return item.ap + item.glory_ap_per_stack * capped
+    capped = min(max(stacks, 0), DarkSeal.glory_max_stacks)
+    return DarkSeal.ap + DarkSeal.glory_ap_per_stack * capped

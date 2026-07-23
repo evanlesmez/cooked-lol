@@ -1,10 +1,16 @@
-from dataclasses import dataclass
+from typing import NamedTuple, Literal
 
 
-@dataclass(frozen=True)
-class Stat:
+class Stat(NamedTuple):
     base: float
     growth: float
+
+
+SpellRank = Literal[1, 2, 3, 4, 5]
+
+
+def validate_rank(rank: SpellRank):
+    assert rank >= 1 and rank <= 5, f"spell ranks can only be 1-5, got {rank}"
 
 
 def stat_at_level(stat: Stat, level: int) -> float:
@@ -20,7 +26,7 @@ def reduce_cooldown(base_cd: float, haste: int) -> float:
     return round(base_cd * 100 / (100 + haste), 1)
 
 
-def post_mitigation(raw_damage: float, resist: float) -> float:
+def post_mitigation_damage(raw_damage: float, resist: float) -> float:
     """
     Damage taken after armor or magic resist mitigation. Same formula for both.
     https://leagueoflegends.fandom.com/wiki/Armor
@@ -30,7 +36,7 @@ def post_mitigation(raw_damage: float, resist: float) -> float:
     return raw_damage * (2 - 100 / (100 - resist))
 
 
-def pre_mitigation(post_damage: float, resist: float) -> float:
+def pre_mitigation_damage(post_damage: float, resist: float) -> float:
     """Inverse of post_mitigation: raw damage required to deal given post-mit damage."""
     if resist >= 0:
         return post_damage * (1 + resist / 100)
