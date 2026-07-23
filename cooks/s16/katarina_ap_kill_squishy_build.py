@@ -36,7 +36,6 @@ from cooked_lol.systems.midlane_quest import quest_ap, quest_bonus_ad
 from cooked_lol.systems.systems import post_mitigation_damage, stat_at_level
 
 KAT_LEVEL = 12
-E_RANK = 3
 CAIT_LEVEL = 10
 DARK_SEAL_STACKS = 3
 RUNE_AF_SHARDS = 2
@@ -135,7 +134,7 @@ def main() -> None:
     ax.invert_yaxis()
     ax.set_xlabel("Post-mitigation damage")
     ax.set_title(
-        f"Kat L{KAT_LEVEL} dagger+E{E_RANK} 2-item spike vs Caitlyn L{CAIT_LEVEL} "
+        f"Kat L{KAT_LEVEL} dagger passive 2-item spike vs Caitlyn L{CAIT_LEVEL} "
         f"({DARK_SEAL_STACKS} Dark Seal stacks)"
     )
     for bar, cost in zip(bars, costs):
