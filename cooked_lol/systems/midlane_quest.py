@@ -1,16 +1,12 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+"""Patch 16.11 midlane reward: amplifies bonus AD and AP after quest completion."""
 
-
-class MidlaneQuest(metaclass=DataReadOnlyMeta):
-    """Patch 16.11 reward: amplifies bonus AD and AP after quest completion."""
-
-    bonus_ad_amp: float = 0.08
-    ap_amp: float = 0.08
+BONUS_AD_AMP = 0.08
+AP_AMP = 0.08
 
 
 def quest_bonus_ad(bonus_ad: float) -> float:
-    return bonus_ad * (1 + MidlaneQuest.bonus_ad_amp)
+    return bonus_ad * (1 + BONUS_AD_AMP)
 
 
 def quest_ap(ap: float) -> float:
-    return ap * (1 + MidlaneQuest.ap_amp)
+    return ap * (1 + AP_AMP)

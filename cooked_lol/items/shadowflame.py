@@ -1,16 +1,14 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
+ITEM = Item(name="Shadowflame", cost=3200, ap=110, magic_pen=15)
 
-class Shadowflame(metaclass=DataReadOnlyMeta):
-    cost: int = 3200
-    ap: int = 110
-    magic_pen: int = 15
-    # Cinderbloom: magic and true damage critically strike against low-HP enemies.
-    passive_crit_pct: float = 120
-    passive_hp_threshold_pct: float = 40
+# Cinderbloom: magic and true damage critically strike against low-HP enemies.
+CINDERBLOOM_CRIT_PCT = 120
+CINDERBLOOM_HP_THRESHOLD_PCT = 40
 
 
 def apply_cinderbloom(raw_dmg: float, target_hp_pct: float) -> float:
-    if target_hp_pct < Shadowflame.passive_hp_threshold_pct:
-        return raw_dmg * Shadowflame.passive_crit_pct / 100
+    assert 0 <= target_hp_pct <= 100, f"target HP must be 0-100%, got {target_hp_pct}"
+    if target_hp_pct < CINDERBLOOM_HP_THRESHOLD_PCT:
+        return raw_dmg * CINDERBLOOM_CRIT_PCT / 100
     return raw_dmg

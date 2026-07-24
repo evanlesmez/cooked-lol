@@ -1,19 +1,18 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
+
+ITEM = Item(name="Dark Seal", cost=350, ap=15, hp=50)
+
+# Glory: takedown stacks grant AP; lose 5 on death. Preserved into Mejai's.
+GLORY_STACKS_PER_KILL = 2
+GLORY_STACKS_PER_ASSIST = 1
+GLORY_STACKS_LOST_ON_DEATH = 5
+GLORY_AP_PER_STACK = 4
+GLORY_MAX_STACKS = 10
 
 
-class DarkSeal(metaclass=DataReadOnlyMeta):
-    cost: int = 350
-    ap: int = 15
-    hp: int = 50
-    # Glory: takedown stacks grant AP; lose 5 on death. Preserved into Mejai's.
-    glory_stacks_per_kill: int = 2
-    glory_stacks_per_assist: int = 1
-    glory_stacks_lost_on_death: int = 5
-    glory_ap_per_stack: int = 4
-    glory_max_stacks: int = 10
-
-
-def ap_with_glory(stacks: int) -> int:
-    """Total AP from item including current Glory stacks (capped at max)."""
-    capped = min(max(stacks, 0), DarkSeal.glory_max_stacks)
-    return DarkSeal.ap + DarkSeal.glory_ap_per_stack * capped
+def ap_with_glory(stacks: int) -> float:
+    """Total AP from item including current Glory stacks."""
+    assert (
+        0 <= stacks <= GLORY_MAX_STACKS
+    ), f"Glory stacks must be 0-{GLORY_MAX_STACKS}, got {stacks}"
+    return ITEM.ap + GLORY_AP_PER_STACK * stacks

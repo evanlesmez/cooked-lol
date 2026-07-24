@@ -1,8 +1,3 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
-
-class DoransBlade(metaclass=DataReadOnlyMeta):
-    cost: int = 450
-    ad: int = 10
-    hp: int = 80
-    omnivamp_pct: float = 2.5
+ITEM = Item(name="Doran's Blade", cost=450, ad=10, hp=80, omnivamp_pct=2.5)

@@ -1,11 +1,10 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
+ITEM = Item(name="Rabadon's Deathcap", cost=3500, ap=130)
 
-class RabadonsDeathcap(metaclass=DataReadOnlyMeta):
-    cost: int = 3500
-    ap: int = 130
-    passive_ap_amp: float = 0.3
+# Magical Opus: amplifies total AP.
+MAGICAL_OPUS_AP_AMP = 0.3
 
 
 def apply_magical_opus(total_ap: float) -> float:
-    return total_ap * (1 + RabadonsDeathcap.passive_ap_amp)
+    return total_ap * (1 + MAGICAL_OPUS_AP_AMP)

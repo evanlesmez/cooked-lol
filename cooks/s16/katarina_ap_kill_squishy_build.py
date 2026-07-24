@@ -17,8 +17,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from cooked_lol.champions.caitlyn import CaitlynStats
-from cooked_lol.champions.katarina import KatarinaStats, sinister_steel
+from cooked_lol.champions.caitlyn import STATS as CAIT
+from cooked_lol.champions.katarina import STATS as KAT
+from cooked_lol.champions.katarina import sinister_steel
 from cooked_lol.items import (
     dark_seal,
     dorans_blade,
@@ -34,33 +35,30 @@ from cooked_lol.items import (
 from cooked_lol.runes import runes
 from cooked_lol.systems.midlane_quest import quest_ap, quest_bonus_ad
 from cooked_lol.systems.systems import post_mitigation_damage, stat_at_level
+from cooked_lol.types.item import Item
 
 KAT_LEVEL = 12
 CAIT_LEVEL = 10
 DARK_SEAL_STACKS = 3
 RUNE_AF_SHARDS = 2
 
-CORE_ITEMS = {
-    "lichbane": lichbane.LichBane,
-    "gunblade": hextech_gunblade.HextechGunblade,
-    "shadowflame": shadowflame.Shadowflame,
-    "rabadons": rabadons_deathcap.RabadonsDeathcap,
-    "voidstaff": void_staff.VoidStaff,
-    "liandrys": liandrys_torment.LiandrysTorment,
+CORE_ITEMS: dict[str, Item] = {
+    "lichbane": lichbane.ITEM,
+    "gunblade": hextech_gunblade.ITEM,
+    "shadowflame": shadowflame.ITEM,
+    "rabadons": rabadons_deathcap.ITEM,
+    "voidstaff": void_staff.ITEM,
+    "liandrys": liandrys_torment.ITEM,
 }
 
-FIXED_COST = (
-    dorans_ring.DoransRing.cost
-    + dark_seal.DarkSeal.cost
-    + spellslingers_shoes.SpellslingersShoes.cost
-)
+FIXED_COST = dorans_ring.ITEM.cost + dark_seal.ITEM.cost + spellslingers_shoes.ITEM.cost
 
 CAIT_HP = (
-    stat_at_level(CaitlynStats.hp, CAIT_LEVEL)
+    stat_at_level(CAIT.hp, CAIT_LEVEL)
     + runes.scaling_hp_shard(CAIT_LEVEL)
-    + dorans_blade.DoransBlade.hp
+    + dorans_blade.ITEM.hp
 )
-CAIT_MR = stat_at_level(CaitlynStats.mr, CAIT_LEVEL)
+CAIT_MR = stat_at_level(CAIT.mr, CAIT_LEVEL)
 
 
 def build_spike(
@@ -72,28 +70,28 @@ def build_spike(
 
     ap = (
         runes.ap_from_shards(RUNE_AF_SHARDS)
-        + dorans_ring.DoransRing.ap
+        + dorans_ring.ITEM.ap
         + dark_seal.ap_with_glory(DARK_SEAL_STACKS)
-        + sum(getattr(it, "ap", 0) for it in chosen)
+        + sum(it.ap for it in chosen)
     )
     if "rabadons" in ids:
         ap = rabadons_deathcap.apply_magical_opus(ap)
     ap = quest_ap(ap)
-    bonus_ad = quest_bonus_ad(sum(getattr(it, "ad", 0) for it in chosen))
+    bonus_ad = quest_bonus_ad(sum(it.ad for it in chosen))
 
     # Magic pen: Spellslinger's always; Void Staff %; Shadowflame flat.
     # Percent pen sources stack multiplicatively, then flat pen applies.
-    pct_factor = 1 - spellslingers_shoes.SpellslingersShoes.magic_pen_pct / 100
+    pct_factor = 1 - spellslingers_shoes.ITEM.magic_pen_pct / 100
     if "voidstaff" in ids:
-        pct_factor *= 1 - void_staff.VoidStaff.magic_pen_pct / 100
-    flat_pen = spellslingers_shoes.SpellslingersShoes.magic_pen
+        pct_factor *= 1 - void_staff.ITEM.magic_pen_pct / 100
+    flat_pen = spellslingers_shoes.ITEM.magic_pen
     if "shadowflame" in ids:
-        flat_pen += shadowflame.Shadowflame.magic_pen
+        flat_pen += shadowflame.ITEM.magic_pen
     eff_mr = max(0.0, CAIT_MR * pct_factor - flat_pen)
 
     raw = sinister_steel.damage(KAT_LEVEL, bonus_ad, ap)
     if "lichbane" in ids:
-        kat_base_ad = stat_at_level(KatarinaStats.ad, KAT_LEVEL)
+        kat_base_ad = stat_at_level(KAT.ad, KAT_LEVEL)
         raw += lichbane.spellblade_damage(kat_base_ad, ap)
     if "gunblade" in ids and gb_active:
         raw += hextech_gunblade.active_damage(KAT_LEVEL, ap)

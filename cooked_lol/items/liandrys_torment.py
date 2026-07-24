@@ -1,21 +1,18 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
+ITEM = Item(name="Liandry's Torment", cost=3000, ap=60, hp=300)
 
-class LiandrysTorment(metaclass=DataReadOnlyMeta):
-    cost: int = 3000
-    ap: int = 60
-    hp: int = 300
-    # Torment: ability damage applies a burn that ticks max-HP% magic damage.
-    burn_pct_per_tick: float = 1.0
-    burn_tick_interval: float = 0.5
-    burn_duration: float = 3.0
-    burn_monster_tick_cap: int = 20
+# Torment: ability damage applies a burn that ticks max-HP% magic damage.
+BURN_PCT_PER_TICK = 1.0
+BURN_TICK_INTERVAL = 0.5
+BURN_DURATION = 3.0
+BURN_MONSTER_TICK_CAP = 20
 
 
 def burn_damage(target_max_hp: float, is_monster: bool = False) -> float:
     """Total Torment burn over full duration (pre-mitigation magic damage)."""
-    ticks = int(LiandrysTorment.burn_duration / LiandrysTorment.burn_tick_interval)
-    per_tick = target_max_hp * LiandrysTorment.burn_pct_per_tick / 100
+    ticks = int(BURN_DURATION / BURN_TICK_INTERVAL)
+    per_tick = target_max_hp * BURN_PCT_PER_TICK / 100
     if is_monster:
-        per_tick = min(per_tick, LiandrysTorment.burn_monster_tick_cap)
+        per_tick = min(per_tick, BURN_MONSTER_TICK_CAP)
     return per_tick * ticks

@@ -1,7 +1,3 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
-
-class VoidStaff(metaclass=DataReadOnlyMeta):
-    cost: int = 3000
-    ap: int = 95
-    magic_pen_pct: float = 40
+ITEM = Item(name="Void Staff", cost=3000, ap=95, magic_pen_pct=40)

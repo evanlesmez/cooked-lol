@@ -55,7 +55,9 @@ def shunpo_cdr_fraction(level: int) -> float:
     return _SHUNPO_CDR_BY_TIER[_level_tier(level)]
 
 
-def shunpo_cd_after_pickup(level: int, shunpo_total_cd: float, shunpo_current_cd: float) -> float:
+def shunpo_cd_after_pickup(
+    level: int, shunpo_total_cd: float, shunpo_current_cd: float
+) -> float:
     """Shunpo current CD after a dagger pickup refund."""
     refund = shunpo_total_cd * shunpo_cdr_fraction(level)
     return max(0.0, shunpo_current_cd - refund)

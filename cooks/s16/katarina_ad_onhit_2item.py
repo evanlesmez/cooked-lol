@@ -15,17 +15,15 @@ counted as damage dealt.
 """
 
 from dataclasses import dataclass
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
-from cooked_lol.champions.caitlyn import CaitlynStats
+from cooked_lol.champions import caitlyn, mordekaiser, viktor
 from cooked_lol.champions.katarina import (
-    KatarinaStats,
     bouncing_blade,
     shunpo,
     sinister_steel,
 )
-from cooked_lol.champions.mordekaiser import MordekaiserStats
-from cooked_lol.champions.viktor import ViktorStats
+from cooked_lol.champions.katarina import STATS as KAT
 from cooked_lol.items import (
     blade_of_the_ruined_king,
     dorans_blade,
@@ -45,11 +43,9 @@ from cooked_lol.systems.systems import (
     post_mitigation_damage,
     stat_at_level,
 )
+from cooked_lol.types.item import Item
 
-# Item classes use DataReadOnlyMeta, so their fields are invisible to type checkers.
-ItemData = Any
-
-KAT_LEVEL = 9
+KAT_LEVEL = 12
 Q_RANK: SpellRank = 5
 E_RANK: SpellRank = 2
 RUNE_AF_SHARDS = 1
@@ -58,20 +54,11 @@ CONQ_STACKS_PER_HIT = 2  # melee; every combo instance
 # Combo step kinds, in order. "Q" is the only step without on-hit.
 COMBO = ("E", "AA", "P", "Q", "E", "AA", "P")
 
-ITEM_SETS = {
-    "Kraken+Bork": (
-        kraken_slayer.KrakenSlayer,
-        blade_of_the_ruined_king.BladeOfTheRuinedKing,
-    ),
-    "Kraken+LDR": (
-        kraken_slayer.KrakenSlayer,
-        lord_dominiks_regards.LordDominiksRegards,
-    ),
-    "Kraken+Terminus": (kraken_slayer.KrakenSlayer, terminus.Terminus),
-    "Bork+LDR": (
-        blade_of_the_ruined_king.BladeOfTheRuinedKing,
-        lord_dominiks_regards.LordDominiksRegards,
-    ),
+ITEM_SETS: dict[str, tuple[Item, ...]] = {
+    "Kraken+Bork": (kraken_slayer.ITEM, blade_of_the_ruined_king.ITEM),
+    "Kraken+LDR": (kraken_slayer.ITEM, lord_dominiks_regards.ITEM),
+    "Kraken+Terminus": (kraken_slayer.ITEM, terminus.ITEM),
+    "Bork+LDR": (blade_of_the_ruined_king.ITEM, lord_dominiks_regards.ITEM),
 }
 
 
@@ -124,26 +111,24 @@ class ComboResult(NamedTuple):
     killed_on_step: int | None
 
 
-def kat_base_bonus_ad(items: tuple[ItemData, ...]) -> float:
+def kat_base_bonus_ad(items: tuple[Item, ...]) -> float:
     """Bonus AD from items + AF shard (pre-quest, pre-Conqueror)."""
     return (
-        dorans_blade.DoransBlade.ad
+        dorans_blade.ITEM.ad
         + runes.ad_from_shards(RUNE_AF_SHARDS)
-        + sum(getattr(it, "ad", 0) for it in items)
+        + sum(it.ad for it in items)
     )
 
 
-def make_build(name: str, items: tuple[ItemData, ...]) -> Build:
-    """ITEM_SETS holds item classes (DataReadOnlyMeta), not instances."""
-    ids = {it.__name__ for it in items}
+def make_build(name: str, items: tuple[Item, ...]) -> Build:
     return Build(
         name=name,
-        cost=dorans_blade.DoransBlade.cost + sum(it.cost for it in items),
+        cost=dorans_blade.ITEM.cost + sum(it.cost for it in items),
         base_bonus_ad=kat_base_bonus_ad(items),
-        has_kraken="KrakenSlayer" in ids,
-        has_bork="BladeOfTheRuinedKing" in ids,
-        has_ldr="LordDominiksRegards" in ids,
-        has_terminus="Terminus" in ids,
+        has_kraken=kraken_slayer.ITEM in items,
+        has_bork=blade_of_the_ruined_king.ITEM in items,
+        has_ldr=lord_dominiks_regards.ITEM in items,
+        has_terminus=terminus.ITEM in items,
     )
 
 
@@ -152,59 +137,56 @@ def ads_at_stacks(base_bonus_ad: float, conq_stacks: int) -> tuple[float, float]
     bonus_ad = quest_bonus_ad(
         base_bonus_ad + conqueror.bonus_ad(KAT_LEVEL, conq_stacks)
     )
-    total_ad = stat_at_level(KatarinaStats.ad, KAT_LEVEL) + bonus_ad
+    total_ad = stat_at_level(KAT.ad, KAT_LEVEL) + bonus_ad
     return total_ad, bonus_ad
 
 
 def target_viktor() -> Target:
-    level = 9
+    level = 12
     bonus_hp = (
-        runes.scaling_hp_shard(level)
-        + dorans_ring.DoransRing.hp
-        + liandrys_torment.LiandrysTorment.hp
+        runes.scaling_hp_shard(level) + dorans_ring.ITEM.hp + liandrys_torment.ITEM.hp
     )
     return Target(
         name=f"Viktor L{level} (HP shard + Doran's Ring + Liandry's)",
-        max_hp=stat_at_level(ViktorStats.hp, level) + bonus_hp,
+        max_hp=stat_at_level(viktor.STATS.hp, level) + bonus_hp,
         bonus_hp=bonus_hp,
-        armor=stat_at_level(ViktorStats.ar, level),
-        mr=stat_at_level(ViktorStats.mr, level),
+        armor=stat_at_level(viktor.STATS.ar, level),
+        mr=stat_at_level(viktor.STATS.mr, level),
         plating=False,
     )
 
 
 def target_caitlyn() -> Target:
-    level = 8
+    level = 11
     return Target(
         name=f"Caitlyn L{level} (no bonus HP)",
-        max_hp=stat_at_level(CaitlynStats.hp, level),
+        max_hp=stat_at_level(caitlyn.STATS.hp, level),
         bonus_hp=0.0,
-        armor=stat_at_level(CaitlynStats.ar, level),
-        mr=stat_at_level(CaitlynStats.mr, level),
+        armor=stat_at_level(caitlyn.STATS.ar, level),
+        mr=stat_at_level(caitlyn.STATS.mr, level),
         plating=False,
     )
 
 
 def target_mordekaiser() -> Target:
-    level = 10
+    level = 14
     bonus_hp = (
         runes.scaling_hp_shard(level)
-        + dorans_ring.DoransRing.hp
-        + rylais_crystal_scepter.RylaisCrystalScepter.hp
-        + riftmaker.Riftmaker.hp
+        + dorans_ring.ITEM.hp
+        + rylais_crystal_scepter.ITEM.hp
+        + riftmaker.ITEM.hp
     )
     return Target(
         name=(
             f"Morde L{level} (HP shard + Doran's Ring + Rylai's + "
             f"Riftmaker + Steelcaps)"
         ),
-        max_hp=stat_at_level(MordekaiserStats.hp, level) + bonus_hp,
+        max_hp=stat_at_level(mordekaiser.STATS.hp, level) + bonus_hp,
         bonus_hp=bonus_hp,
         armor=(
-            stat_at_level(MordekaiserStats.ar, level)
-            + plated_steelcaps.PlatedSteelcaps.armor
+            stat_at_level(mordekaiser.STATS.ar, level) + plated_steelcaps.ITEM.armor
         ),
-        mr=stat_at_level(MordekaiserStats.mr, level),
+        mr=stat_at_level(mordekaiser.STATS.mr, level),
         plating=True,
     )
 
@@ -216,9 +198,7 @@ def effective_resists(
     armor_pen_ratio = 1.0
     magic_pen_ratio = 1.0
     if build.has_ldr:
-        armor_pen_ratio *= (
-            1 - lord_dominiks_regards.LordDominiksRegards.armor_pen_pct / 100
-        )
+        armor_pen_ratio *= 1 - lord_dominiks_regards.ITEM.armor_pen_pct / 100
     if build.has_terminus:
         dark_ratio = 1 - terminus.dark_pen_pct(terminus_dark) / 100
         armor_pen_ratio *= dark_ratio
@@ -262,16 +242,18 @@ def apply_on_hit(state: ComboState, target: Target, build: Build) -> None:
     snap_hp = state.hp
 
     if build.has_bork:
-        raw_phys += blade_of_the_ruined_king.mists_edge_damage(snap_hp, is_melee=True)
+        raw_phys += blade_of_the_ruined_king.mists_edge_damage(
+            snap_hp, is_melee=KAT.melee
+        )
 
     if build.has_terminus:
-        raw_magic += terminus.Terminus.shadow_onhit_magic
+        raw_magic += terminus.SHADOW_ONHIT_MAGIC
 
     if build.has_kraken:
-        if state.kraken_stacks >= kraken_slayer.KrakenSlayer.bring_it_down_max_stacks:
+        if state.kraken_stacks >= kraken_slayer.BRING_IT_DOWN_MAX_STACKS:
             missing_pct = (1 - snap_hp / target.max_hp) * 100
             raw_phys += kraken_slayer.bring_it_down_damage(
-                KAT_LEVEL, missing_pct, is_melee=True
+                KAT_LEVEL, missing_pct, is_melee=KAT.melee
             )
             state.kraken_stacks = 0
         else:
@@ -284,7 +266,7 @@ def apply_on_hit(state: ComboState, target: Target, build: Build) -> None:
         # damage onward.
         if not state.terminus_next_light:
             state.terminus_dark = min(
-                state.terminus_dark + 1, terminus.Terminus.juxtaposition_max_stacks
+                state.terminus_dark + 1, terminus.JUXTAPOSITION_MAX_STACKS
             )
         state.terminus_next_light = not state.terminus_next_light
 

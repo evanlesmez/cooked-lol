@@ -1,31 +1,25 @@
 import math
 
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
+ITEM = Item(name="Doran's Ring", cost=400, ap=18, hp=90)
 
-class DoransRing(metaclass=DataReadOnlyMeta):
-    cost: int = 400
-    ap: int = 18
-    hp: int = 90
-    # Drain: passive mana regen, doubled for 5s after damaging a champion.
-    drain_mana_per_sec: int = 1
-    drain_active_mana_per_sec: int = 2
-    drain_active_duration: float = 5.0
-    drain_manaless_heal_pct: float = 45
-    # Helping Hand: bonus on-hit physical damage to minions.
-    helping_hand_minion_dmg: int = 5
+# Drain: passive mana regen, doubled for 5s after damaging a champion.
+DRAIN_MANA_PER_SEC = 1
+DRAIN_ACTIVE_MANA_PER_SEC = 2
+DRAIN_ACTIVE_DURATION = 5.0
+DRAIN_MANALESS_HEAL_PCT = 45
+
+# Helping Hand: bonus on-hit physical damage to minions.
+HELPING_HAND_MINION_DMG = 5
 
 
 def drain_mana_regen(in_champion_combat: bool) -> int:
     """Mana restored per second from Drain. Doubles for 5s after damaging a champ."""
-    return (
-        DoransRing.drain_active_mana_per_sec
-        if in_champion_combat
-        else DoransRing.drain_mana_per_sec
-    )
+    return DRAIN_ACTIVE_MANA_PER_SEC if in_champion_combat else DRAIN_MANA_PER_SEC
 
 
 def drain_heal_per_sec(in_champion_combat: bool) -> int:
     """For manaless champions: floor(value * 45%) heal per second instead of mana."""
     value = drain_mana_regen(in_champion_combat)
-    return math.floor(value * DoransRing.drain_manaless_heal_pct / 100)
+    return math.floor(value * DRAIN_MANALESS_HEAL_PCT / 100)

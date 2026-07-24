@@ -1,8 +1,9 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
-
-class SpellslingersShoes(metaclass=DataReadOnlyMeta):
-    cost: int = 1100
-    magic_pen_pct: float = 8
-    magic_pen: int = 18
-    move_speed: int = 45
+ITEM = Item(
+    name="Spellslinger's Shoes",
+    cost=1100,
+    magic_pen=18,
+    magic_pen_pct=8,
+    move_speed=45,
+)

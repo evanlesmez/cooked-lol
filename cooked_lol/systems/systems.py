@@ -1,10 +1,6 @@
-from typing import NamedTuple, Literal
+from typing import Literal
 
-
-class Stat(NamedTuple):
-    base: float
-    growth: float
-
+from cooked_lol.types.champion_stats import Stat
 
 SpellRank = Literal[1, 2, 3, 4, 5]
 

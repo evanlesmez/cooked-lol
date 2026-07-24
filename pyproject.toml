@@ -8,7 +8,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["black"]
+dev = ["black", "pyright"]
 
 [build-system]
 requires = ["setuptools>=61"]
@@ -16,3 +16,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["cooked_lol*"]
+
+[tool.pyright]
+include = ["cooked_lol", "cooks"]
+venvPath = "."
+venv = "env"
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false

@@ -17,7 +17,26 @@ pip install -e ".[dev]"
 ```
 
 Dependencies live in `pyproject.toml`: runtime in `[project].dependencies`,
-tooling (black, mypy) in the `dev` extra. Drop `[dev]` if you only want to run cooks.
+tooling (black, pyright) in the `dev` extra. Drop `[dev]` if you only want to run cooks.
+
+```sh
+env/bin/black cooked_lol cooks   # format
+env/bin/pyright                  # type check, must stay at 0 errors
+```
+
+There are no tests. The regression check is cook stdout — capture it before a
+refactor and diff it after:
+
+```sh
+python cooks/s16/katarina_ad_onhit_2item.py > /tmp/before.txt
+```
+
+## Data layout
+
+Items and champions are fat frozen structs: one file per entity exporting a single
+const (`ITEM` for items, `STATS` for champions) built from the shared shapes in
+`cooked_lol/types/`. Unique passives are UPPER_SNAKE module constants plus free
+functions in the same module. See `CLAUDE.md`.
 
 ## TODOS: 
 Plan better data organization so patches are less confusing

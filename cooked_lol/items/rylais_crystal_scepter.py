@@ -1,10 +1,7 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
+ITEM = Item(name="Rylai's Crystal Scepter", cost=2600, ap=65, hp=400)
 
-class RylaisCrystalScepter(metaclass=DataReadOnlyMeta):
-    cost: int = 2600
-    ap: int = 65
-    hp: int = 400
-    # Rimefrost: damaging abilities slow the target.
-    slow_pct: float = 30.0
-    slow_duration: float = 1.0
+# Rimefrost: damaging abilities slow the target.
+RIMEFROST_SLOW_PCT = 30.0
+RIMEFROST_SLOW_DURATION = 1.0

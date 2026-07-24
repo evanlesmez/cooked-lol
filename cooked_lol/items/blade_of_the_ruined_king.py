@@ -1,21 +1,24 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
+ITEM = Item(
+    name="Blade of the Ruined King",
+    cost=3200,
+    ad=40,
+    attack_speed_pct=25.0,
+    life_steal_pct=10.0,
+)
 
-class BladeOfTheRuinedKing(metaclass=DataReadOnlyMeta):
-    cost: int = 3200
-    ad: int = 40
-    attack_speed_pct: float = 25.0
-    life_steal_pct: float = 10.0
-    # Mist's Edge: on-hit bonus physical damage = % of target's current HP.
-    mists_edge_current_hp_pct_melee: float = 9.0
-    mists_edge_current_hp_pct_ranged: float = 6.0
-    mists_edge_minion_monster_cap: int = 100
-    # Clawing Shadows: 3rd stack on-hit slows the target (champion only).
-    clawing_shadows_stack_duration: float = 6.0
-    clawing_shadows_max_stacks: int = 3
-    clawing_shadows_slow_pct: float = 30.0
-    clawing_shadows_slow_duration: float = 1.0
-    clawing_shadows_cd: float = 15.0
+# Mist's Edge: on-hit bonus physical damage = % of target's current HP.
+MISTS_EDGE_CURRENT_HP_PCT_MELEE = 9.0
+MISTS_EDGE_CURRENT_HP_PCT_RANGED = 6.0
+MISTS_EDGE_MINION_MONSTER_CAP = 100
+
+# Clawing Shadows: 3rd stack on-hit slows the target (champion only).
+CLAWING_SHADOWS_STACK_DURATION = 6.0
+CLAWING_SHADOWS_MAX_STACKS = 3
+CLAWING_SHADOWS_SLOW_PCT = 30.0
+CLAWING_SHADOWS_SLOW_DURATION = 1.0
+CLAWING_SHADOWS_CD = 15.0
 
 
 def mists_edge_damage(
@@ -25,11 +28,11 @@ def mists_edge_damage(
 ) -> float:
     """Pre-mitigation on-hit physical damage from Mist's Edge."""
     pct = (
-        BladeOfTheRuinedKing.mists_edge_current_hp_pct_melee
+        MISTS_EDGE_CURRENT_HP_PCT_MELEE
         if is_melee
-        else BladeOfTheRuinedKing.mists_edge_current_hp_pct_ranged
+        else MISTS_EDGE_CURRENT_HP_PCT_RANGED
     )
     dmg = target_current_hp * pct / 100
     if is_minion_or_monster:
-        dmg = min(dmg, BladeOfTheRuinedKing.mists_edge_minion_monster_cap)
+        dmg = min(dmg, MISTS_EDGE_MINION_MONSTER_CAP)
     return dmg

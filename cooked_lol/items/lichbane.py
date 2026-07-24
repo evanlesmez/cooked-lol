@@ -1,14 +1,19 @@
-from cooked_lol.metaclass.metaclass import DataReadOnlyMeta
+from cooked_lol.types.item import Item
 
+ITEM = Item(
+    name="Lich Bane",
+    cost=2900,
+    ap=100,
+    ability_haste=10,
+    move_speed_pct=6.0,
+)
 
-class LichBane(metaclass=DataReadOnlyMeta):
-    cost: int = 2900
-    ap: int = 100
-    ability_haste: int = 10
-    move_speed_pct: float = 6.0
-    spellblade_cd_secs: float = 1.5
+# Spellblade: next basic attack after an ability is empowered.
+SPELLBLADE_CD_SECS = 1.5
+SPELLBLADE_BASE_AD_RATIO = 0.75
+SPELLBLADE_AP_RATIO = 0.45
 
 
 def spellblade_damage(base_ad: float, ap: float) -> float:
     """Raw magic damage on a spellblade empowered onhit."""
-    return 0.75 * base_ad + 0.45 * ap
+    return SPELLBLADE_BASE_AD_RATIO * base_ad + SPELLBLADE_AP_RATIO * ap
