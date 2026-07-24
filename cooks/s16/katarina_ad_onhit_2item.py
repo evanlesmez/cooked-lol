@@ -14,17 +14,11 @@ step that kills, and damage past 0 HP is reported as overkill instead of being
 counted as damage dealt.
 """
 
+import argparse
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, NamedTuple
-
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from cooked_lol.champions import caitlyn, mordekaiser, viktor
 from cooked_lol.champions.katarina import (
@@ -53,6 +47,9 @@ from cooked_lol.systems.systems import (
     stat_at_level,
 )
 from cooked_lol.types.item import Item
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
 
 KAT_LEVEL = 12
 Q_RANK: SpellRank = 5
@@ -416,7 +413,7 @@ KILL_GUTTER_Y = -3.4
 KILL_DODGE = 0.17
 
 
-def plot_panel(ax: Axes, target: Target, start_hp_pct: float) -> None:
+def plot_panel(ax: "Axes", target: Target, start_hp_pct: float) -> None:
     """One HP-depletion panel: a line per build over the combo steps."""
     for idx, (name, items) in enumerate(ITEM_SETS.items()):
         result = simulate(make_build(name, items), target, start_hp_pct=start_hp_pct)
@@ -450,6 +447,13 @@ def plot_panel(ax: Axes, target: Target, start_hp_pct: float) -> None:
 
 def plot_grid(targets: tuple[Target, ...]) -> Path:
     """Grid of HP-depletion panels: rows are targets, columns start-HP checkpoints."""
+    # Imported lazily: matplotlib costs ~230ms and only --plot runs needs it.
+    import matplotlib
+
+    matplotlib.use("Agg")
+
+    import matplotlib.pyplot as plt
+
     fig, axes = plt.subplots(
         len(targets),
         len(START_HP_PCTS),
@@ -459,7 +463,7 @@ def plot_grid(targets: tuple[Target, ...]) -> Path:
     )
     for row, target in enumerate(targets):
         for col, start_hp_pct in enumerate(START_HP_PCTS):
-            ax: Axes = axes[row][col]
+            ax: "Axes" = axes[row][col]
             plot_panel(ax, target, start_hp_pct)
             if row == 0:
                 ax.set_title(f"@ {start_hp_pct:g}% HP", fontsize=12)
@@ -489,7 +493,20 @@ def plot_grid(targets: tuple[Target, ...]) -> Path:
     return out
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Katarina AD on-hit 2-item cores: print damage tables.",
+    )
+    parser.add_argument(
+        "--plot",
+        action="store_true",
+        help="also write the HP-trajectory grid PNG next to this script",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     print(
         f"Kat L{KAT_LEVEL}  Q{Q_RANK} E{E_RANK}  "
         f"Doran's Blade + 1 AF + Conqueror (AD) + midlane quest  |  "
@@ -500,8 +517,9 @@ def main() -> None:
         for target in targets:
             print_table(target, start_hp_pct=start_hp_pct)
 
-    # stderr so the tables on stdout stay a stable regression baseline.
-    print(f"chart -> {plot_grid(targets)}", file=sys.stderr)
+    if args.plot:
+        # stderr so the tables on stdout stay a stable regression baseline.
+        print(f"chart -> {plot_grid(targets)}", file=sys.stderr)
 
 
 if __name__ == "__main__":
