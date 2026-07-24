@@ -31,6 +31,27 @@ refactor and diff it after:
 python cooks/s16/katarina_ad_onhit_2item.py > /tmp/before.txt
 ```
 
+## Cooks
+
+Cooks print tables to stdout and take `--plot` to also write charts. Plotting is
+off by default because matplotlib costs ~230ms to import and most runs only want
+the tables.
+
+```sh
+python cooks/s16/katarina_ad_onhit_2item.py           # tables only
+python cooks/s16/katarina_ad_onhit_3item.py --plot    # tables + charts
+```
+
+Charts land in `cooks/assets/` via `cooks.config.asset_path`; use that for any new
+cook rather than writing next to the script. The chart path is printed to stderr so
+stdout stays a clean regression baseline.
+
+Shared cook code lives at the top of `cooks/`:
+
+- `cooks/combo_sim.py` — on-hit combo engine (targets, builds, on-hit
+  ordering, mitigation, overkill). Steps resolve to one or more `Hit`s, so a
+  channel like Death Lotus can be 15 daggers that each apply on-hit effects.
+
 ## Data layout
 
 Items and champions are fat frozen structs: one file per entity exporting a single

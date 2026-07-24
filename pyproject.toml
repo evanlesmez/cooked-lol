@@ -15,7 +15,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["cooked_lol*"]
+include = ["cooked_lol*", "cooks*"]
 
 [tool.pyright]
 include = ["cooked_lol", "cooks"]

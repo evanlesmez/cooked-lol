@@ -13,7 +13,6 @@ Print graph of results. Include onhit and gb active if in build.
 """
 
 from itertools import combinations, product
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 
@@ -36,6 +35,7 @@ from cooked_lol.runes import runes
 from cooked_lol.systems.midlane_quest import quest_ap, quest_bonus_ad
 from cooked_lol.systems.systems import post_mitigation_damage, stat_at_level
 from cooked_lol.types.item import Item
+from cooks import config
 
 KAT_LEVEL = 12
 CAIT_LEVEL = 10
@@ -144,7 +144,7 @@ def main() -> None:
             fontsize=9,
         )
     plt.tight_layout()
-    out = Path(__file__).with_suffix(".png")
+    out = config.asset_path("katarina_ap_kill_squishy_build")
     plt.savefig(out)
     print(f"\nchart -> {out}")
 
