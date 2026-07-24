@@ -52,10 +52,19 @@ class Build(NamedTuple):
     has_terminus: bool
 
 
-# Damage-source labels used for per-hit attribution in charts.
+# Damage-source labels used for per-hit attribution in charts. Bork's Mist's Edge
+# and Kraken's Bring It Down are physical; Terminus' Shadow is magic.
 SOURCE_BORK = "Bork Mist's Edge"
 SOURCE_TERMINUS = "Terminus Shadow"
 SOURCE_KRAKEN = "Kraken Bring It Down"
+
+
+def physical_label(label: str) -> str:
+    return f"{label} (physical)"
+
+
+def magic_label(label: str) -> str:
+    return f"{label} (magic)"
 
 
 class Hit(NamedTuple):
@@ -313,16 +322,18 @@ def simulate(
                     is_melee=is_melee,
                     effectiveness=hit.onhit_effectiveness,
                 )
-            own = mitigated_damage(
-                state,
-                target,
-                build,
-                hit.raw_physical,
-                hit.raw_magic,
-                basic=hit.is_basic_attack,
+            # Logged as two components so charts can separate the damage types.
+            # Mitigation is linear, so splitting does not change the total.
+            own_phys = mitigated_damage(
+                state, target, build, hit.raw_physical, 0.0, basic=hit.is_basic_attack
             )
-            if own > 0:
-                components.append((hit.label, own))
+            own_magic = mitigated_damage(
+                state, target, build, 0.0, hit.raw_magic, basic=hit.is_basic_attack
+            )
+            if own_phys > 0:
+                components.append((physical_label(hit.label), own_phys))
+            if own_magic > 0:
+                components.append((magic_label(hit.label), own_magic))
             deal(
                 state,
                 target,

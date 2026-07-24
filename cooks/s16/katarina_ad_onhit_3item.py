@@ -62,7 +62,9 @@ from cooks.combo_sim import (
     ComboResult,
     Hit,
     Target,
+    magic_label,
     make_build,
+    physical_label,
     simulate,
 )
 
@@ -110,12 +112,24 @@ assert (
     BUILD_COLORS.keys() == ITEM_SETS.keys()
 ), f"BUILD_COLORS must cover exactly ITEM_SETS, got {BUILD_COLORS.keys() ^ ITEM_SETS.keys()}"
 
-# Death Lotus tick chart: dagger's own damage on the bottom, on-hit procs above.
+# Death Lotus tick chart: the dagger's own damage on the bottom split by damage
+# type, then the on-hit procs above it. Orange is physical and blue is magic, which
+# is the split LDR's armor pen acts on (physical only).
 R_DAGGER_LABEL = "R dagger"
-SOURCE_ORDER = (R_DAGGER_LABEL, SOURCE_BORK, SOURCE_TERMINUS, SOURCE_KRAKEN)
+R_DAGGER_PHYS = physical_label(R_DAGGER_LABEL)
+R_DAGGER_MAGIC = magic_label(R_DAGGER_LABEL)
+SOURCE_ORDER = (
+    R_DAGGER_PHYS,
+    R_DAGGER_MAGIC,
+    SOURCE_BORK,
+    SOURCE_TERMINUS,
+    SOURCE_KRAKEN,
+)
 SOURCE_COLORS = {
-    R_DAGGER_LABEL: "tab:purple",
-    SOURCE_BORK: "tab:cyan",
+    R_DAGGER_PHYS: "tab:orange",
+    R_DAGGER_MAGIC: "tab:blue",
+    # Not cyan: it would sit directly above the blue magic band and blur into it.
+    SOURCE_BORK: "tab:purple",
     SOURCE_TERMINUS: "tab:olive",
     SOURCE_KRAKEN: "tab:red",
 }
