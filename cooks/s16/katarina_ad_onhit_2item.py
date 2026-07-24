@@ -14,8 +14,17 @@ step that kills, and damage past 0 HP is reported as overkill instead of being
 counted as damage dealt.
 """
 
-from dataclasses import dataclass
-from typing import NamedTuple
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal, NamedTuple
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 from cooked_lol.champions import caitlyn, mordekaiser, viktor
 from cooked_lol.champions.katarina import (
@@ -61,9 +70,24 @@ ITEM_SETS: dict[str, tuple[Item, ...]] = {
     "Bork+LDR": (blade_of_the_ruined_king.ITEM, lord_dominiks_regards.ITEM),
 }
 
+# Fixed colour per build so a build keeps its identity across every panel.
+BUILD_COLORS = {
+    "Kraken+Bork": "tab:blue",
+    "Kraken+LDR": "tab:orange",
+    "Kraken+Terminus": "tab:green",
+    "Bork+LDR": "tab:red",
+}
+assert (
+    BUILD_COLORS.keys() == ITEM_SETS.keys()
+), f"BUILD_COLORS must cover exactly ITEM_SETS, got {BUILD_COLORS.keys() ^ ITEM_SETS.keys()}"
+
+# Start-HP checkpoints charted and tabulated, in order.
+START_HP_PCTS = (100.0, 75.0, 40.0)
+
 
 class Target(NamedTuple):
     name: str
+    short: str  # chart row label
     max_hp: float
     bonus_hp: float
     armor: float
@@ -98,6 +122,8 @@ class ComboState:
     overkill: float = 0.0
     steps_used: int = 0
     killed_on_step: int | None = None
+    # HP remaining at each step boundary, starting with the pre-combo value.
+    curve: list[float] = field(default_factory=list)
 
 
 class ComboResult(NamedTuple):
@@ -109,6 +135,9 @@ class ComboResult(NamedTuple):
     hp_left: float
     steps_used: int
     killed_on_step: int | None
+    # start_hp followed by HP after each resolved step, so it is len(COMBO) + 1
+    # long unless the combo ended early on a kill.
+    hp_curve: tuple[float, ...]
 
 
 def kat_base_bonus_ad(items: tuple[Item, ...]) -> float:
@@ -148,6 +177,7 @@ def target_viktor() -> Target:
     )
     return Target(
         name=f"Viktor L{level} (HP shard + Doran's Ring + Liandry's)",
+        short=f"Viktor L{level}",
         max_hp=stat_at_level(viktor.STATS.hp, level) + bonus_hp,
         bonus_hp=bonus_hp,
         armor=stat_at_level(viktor.STATS.ar, level),
@@ -160,6 +190,7 @@ def target_caitlyn() -> Target:
     level = 11
     return Target(
         name=f"Caitlyn L{level} (no bonus HP)",
+        short=f"Caitlyn L{level}",
         max_hp=stat_at_level(caitlyn.STATS.hp, level),
         bonus_hp=0.0,
         armor=stat_at_level(caitlyn.STATS.ar, level),
@@ -181,6 +212,7 @@ def target_mordekaiser() -> Target:
             f"Morde L{level} (HP shard + Doran's Ring + Rylai's + "
             f"Riftmaker + Steelcaps)"
         ),
+        short=f"Morde L{level}",
         max_hp=stat_at_level(mordekaiser.STATS.hp, level) + bonus_hp,
         bonus_hp=bonus_hp,
         armor=(
@@ -271,20 +303,29 @@ def apply_on_hit(state: ComboState, target: Target, build: Build) -> None:
         state.terminus_next_light = not state.terminus_next_light
 
 
-def step_damage(
-    step: str, build: Build, conq_stacks: int
-) -> tuple[float, float, bool, bool]:
-    """(raw_phys, raw_magic, is_basic, applies_on_hit) for one combo step."""
+StepShorthand = Literal["E", "AA", "P", "Q"]
+
+
+class StepDamage(NamedTuple):
+    raw_physical: float
+    raw_magic: float
+    is_basic_attack: bool
+    applies_on_hit: bool
+
+
+def step_damage(step: StepShorthand, build: Build, conq_stacks: int) -> StepDamage:
     total_ad, bonus_ad = ads_at_stacks(build.base_bonus_ad, conq_stacks)
-    ap = quest_ap(0.0)
+    ap = quest_ap(0.0)  # bc no AP in build
     if step == "E":
-        return 0.0, shunpo.damage(E_RANK, bonus_ad, ap), False, True
+        return StepDamage(0.0, shunpo.damage(E_RANK, bonus_ad, ap), False, True)
     if step == "AA":
-        return total_ad, 0.0, True, True
+        return StepDamage(total_ad, 0.0, True, True)
     if step == "P":
-        return 0.0, sinister_steel.damage(KAT_LEVEL, bonus_ad, ap), False, True
+        return StepDamage(
+            0.0, sinister_steel.damage(KAT_LEVEL, bonus_ad, ap), False, True
+        )
     assert step == "Q", f"unknown combo step {step!r}"
-    return 0.0, bouncing_blade.damage(Q_RANK, ap), False, False
+    return StepDamage(0.0, bouncing_blade.damage(Q_RANK, ap), False, False)
 
 
 def simulate(
@@ -296,7 +337,7 @@ def simulate(
         0 < start_hp_pct <= 100
     ), f"start_hp_pct must be in (0, 100], got {start_hp_pct}"
     start_hp = target.max_hp * start_hp_pct / 100
-    state = ComboState(hp=start_hp)
+    state = ComboState(hp=start_hp, curve=[start_hp])
 
     for step_no, step in enumerate(COMBO, start=1):
         raw_phys, raw_magic, basic, applies_on_hit = step_damage(
@@ -306,6 +347,7 @@ def simulate(
             apply_on_hit(state, target, build)
         deal(state, target, build, raw_phys, raw_magic, basic=basic)
         state.steps_used = step_no
+        state.curve.append(state.hp)
         if state.hp <= 0:
             state.killed_on_step = step_no
             break
@@ -322,6 +364,7 @@ def simulate(
         hp_left=state.hp,
         steps_used=state.steps_used,
         killed_on_step=state.killed_on_step,
+        hp_curve=tuple(state.curve),
     )
 
 
@@ -366,6 +409,86 @@ def print_table(target: Target, start_hp_pct: float = 100.0) -> None:
         )
 
 
+# Kill markers sit in a gutter below the axis rather than on y=0, because every
+# killing build lands on exactly 0 HP and the markers would hide each other.
+# They are also dodged sideways so builds that kill on the same step stay legible.
+KILL_GUTTER_Y = -3.4
+KILL_DODGE = 0.17
+
+
+def plot_panel(ax: Axes, target: Target, start_hp_pct: float) -> None:
+    """One HP-depletion panel: a line per build over the combo steps."""
+    for idx, (name, items) in enumerate(ITEM_SETS.items()):
+        result = simulate(make_build(name, items), target, start_hp_pct=start_hp_pct)
+        curve_pct = [hp / result.start_hp * 100 for hp in result.hp_curve]
+        ax.plot(
+            range(len(curve_pct)),
+            curve_pct,
+            color=BUILD_COLORS[name],
+            marker="o",
+            markersize=3.5,
+            linewidth=1.7,
+            label=name,
+            zorder=2,
+        )
+        if result.killed_on_step is not None:
+            dodge = (idx - (len(ITEM_SETS) - 1) / 2) * KILL_DODGE
+            ax.plot(
+                result.killed_on_step + dodge,
+                KILL_GUTTER_Y,
+                marker="X",
+                markersize=9,
+                color=BUILD_COLORS[name],
+                markeredgecolor="black",
+                markeredgewidth=0.6,
+                clip_on=False,
+                zorder=3,
+            )
+    ax.axhline(0, color="black", linestyle="--", linewidth=0.9, zorder=1)
+    ax.grid(True, alpha=0.3, linewidth=0.5)
+
+
+def plot_grid(targets: tuple[Target, ...]) -> Path:
+    """Grid of HP-depletion panels: rows are targets, columns start-HP checkpoints."""
+    fig, axes = plt.subplots(
+        len(targets),
+        len(START_HP_PCTS),
+        figsize=(15, 11),
+        sharex=True,
+        sharey=True,
+    )
+    for row, target in enumerate(targets):
+        for col, start_hp_pct in enumerate(START_HP_PCTS):
+            ax: Axes = axes[row][col]
+            plot_panel(ax, target, start_hp_pct)
+            if row == 0:
+                ax.set_title(f"@ {start_hp_pct:g}% HP", fontsize=12)
+            if col == 0:
+                ax.set_ylabel(target.short, fontsize=12, fontweight="bold")
+
+    # Shared axes, so configuring one configures all of them.
+    axes[0][0].set_xticks(range(len(COMBO) + 1))
+    axes[0][0].set_xticklabels(("start", *COMBO))
+    axes[0][0].set_ylim(-6, 105)
+
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=len(ITEM_SETS), frameon=False)
+    fig.supylabel("Target HP remaining (% of start HP)")
+    fig.supxlabel("Combo step", y=0.055)
+    fig.suptitle(
+        f"Katarina L{KAT_LEVEL} AD on-hit 2-item cores  |  Q{Q_RANK} E{E_RANK}  |  "
+        f"combo {'>'.join(COMBO)}\n"
+        "line stops where the target dies; X below the axis marks the killing step",
+        fontsize=14,
+    )
+    fig.tight_layout(rect=(0.015, 0.05, 1, 0.97))
+
+    out = Path(__file__).with_suffix(".png")
+    fig.savefig(out, dpi=120)
+    plt.close(fig)
+    return out
+
+
 def main() -> None:
     print(
         f"Kat L{KAT_LEVEL}  Q{Q_RANK} E{E_RANK}  "
@@ -373,9 +496,12 @@ def main() -> None:
         f"combo {'>'.join(COMBO)} (+{CONQ_STACKS_PER_HIT} conq/hit, melee)"
     )
     targets = (target_viktor(), target_caitlyn(), target_mordekaiser())
-    for start_hp_pct in (100.0, 75.0, 40.0):
+    for start_hp_pct in START_HP_PCTS:
         for target in targets:
             print_table(target, start_hp_pct=start_hp_pct)
+
+    # stderr so the tables on stdout stay a stable regression baseline.
+    print(f"chart -> {plot_grid(targets)}", file=sys.stderr)
 
 
 if __name__ == "__main__":
