@@ -13,8 +13,11 @@ Future sources:
 ```sh
 python3 -m venv env
 source env/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
+
+Dependencies live in `pyproject.toml`: runtime in `[project].dependencies`,
+tooling (black, mypy) in the `dev` extra. Drop `[dev]` if you only want to run cooks.
 
 ## TODOS: 
 Plan better data organization so patches are less confusing

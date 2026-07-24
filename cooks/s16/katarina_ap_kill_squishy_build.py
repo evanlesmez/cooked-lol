@@ -18,7 +18,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from cooked_lol.champions.caitlyn import CaitlynStats
-from cooked_lol.champions.katarina import KatarinaStats, dagger_damage
+from cooked_lol.champions.katarina import KatarinaStats, sinister_steel
 from cooked_lol.items import (
     dark_seal,
     dorans_blade,
@@ -91,7 +91,7 @@ def build_spike(
         flat_pen += shadowflame.Shadowflame.magic_pen
     eff_mr = max(0.0, CAIT_MR * pct_factor - flat_pen)
 
-    raw = dagger_damage(KAT_LEVEL, bonus_ad, ap)
+    raw = sinister_steel.damage(KAT_LEVEL, bonus_ad, ap)
     if "lichbane" in ids:
         kat_base_ad = stat_at_level(KatarinaStats.ad, KAT_LEVEL)
         raw += lichbane.spellblade_damage(kat_base_ad, ap)
