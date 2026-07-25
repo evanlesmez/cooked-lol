@@ -63,7 +63,7 @@ const (`ITEM` for items, `STATS` for champions) built from the shared shapes in
 functions in the same module. See `CLAUDE.md`.
 
 ## TODOS: 
-Plan better data organization so patches are less confusing  
-  - Store all versions of an item in same file and give it a static patch string member  
-How to simplify damage combination data calculations  
+- Plan better data organization so patches are less confusing  
+  - Store all versions of an item in same file and give it a static patch string member
+- How to simplify damage combination data calculations?
 
