@@ -3,10 +3,13 @@
 A place to analyze data about champions to come up with strategies and build ideas.  
 Only data source currently is https://lolwiki.com  
 
-Future sources:  
+<img width="640" height="360" alt="cooking-irelia" src="https://github.com/user-attachments/assets/fb224b6f-acbd-49a2-a999-07ed8c0a90a4" />
+
+Future sources:
 - https://www.communitydragon.org/  
 - [lolalytics](https://lolalytics.com/lol) for global game data statistics.  
 - [Riot API](https://developer.riotgames.com/apis)  
+
 
 ## Quickstart
 
