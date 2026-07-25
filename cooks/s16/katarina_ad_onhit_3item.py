@@ -1,5 +1,5 @@
 """
-Katarina AD on-hit 3-item cores (no boots).
+Katarina AD on-hit 3-item cores.
 
 Kat L16, Doran's Blade, 1 adaptive force (AD), Conqueror (AD), midlane quest done.
 Skill order Q > E > W with R at 6/11/16 -> Q5 E5 W3 R3.
@@ -12,6 +12,12 @@ Compares the two 3-item finishes off a Kraken > Bork core:
 Two combos, charted separately because their step counts differ:
     E > AA > P > Q > E > AA > P   the on-hit combo from the 2-item cook
     E > Q > P > R                 dagger drop into Death Lotus
+
+The E > Q > P > R combo also runs both cores with Gunmetal Greaves added, since
+Death Lotus' physical damage is the only thing in this model that scales with
+bonus attack speed. The on-hit combo deliberately omits the boots variants: no
+step there scales with attack speed, so they would be identical lines costing
+1100 more gold.
 
 Modelling notes for E > Q > P > R:
   - Q drops a dagger; P is Kat picking it up, so it resolves as the Sinister Steel
@@ -46,6 +52,7 @@ from cooked_lol.items import (
     plated_steelcaps,
     riftmaker,
     rylais_crystal_scepter,
+    gunmetal_greaves,
     terminus,
     zhonyas_hourglass,
 )
@@ -64,7 +71,9 @@ from cooks.combo_sim import (
     Target,
     magic_label,
     make_build,
+    make_target,
     physical_label,
+    rank_key,
     simulate,
 )
 
@@ -83,34 +92,56 @@ class ComboSpec(NamedTuple):
     label: str  # human-readable name for headings
     slug: str  # chart filename suffix
     steps: tuple[str, ...]
+    builds: tuple[str, ...]  # ITEM_SETS keys to compare for this combo
 
 
-COMBOS = (
-    ComboSpec("on-hit", "onhit", ("E", "AA", "P", "Q", "E", "AA", "P")),
-    ComboSpec("E>Q>P>R", "eqpr", ("E", "Q", "P", "R")),
+_TERMINUS_CORE = (
+    kraken_slayer.ITEM,
+    blade_of_the_ruined_king.ITEM,
+    terminus.ITEM,
+)
+_LDR_CORE = (
+    kraken_slayer.ITEM,
+    blade_of_the_ruined_king.ITEM,
+    lord_dominiks_regards.ITEM,
 )
 
 ITEM_SETS: dict[str, tuple[Item, ...]] = {
-    "Kraken>Bork>Terminus": (
-        kraken_slayer.ITEM,
-        blade_of_the_ruined_king.ITEM,
-        terminus.ITEM,
-    ),
-    "Kraken>Bork>LDR": (
-        kraken_slayer.ITEM,
-        blade_of_the_ruined_king.ITEM,
-        lord_dominiks_regards.ITEM,
-    ),
+    "Kraken>Bork>Terminus": _TERMINUS_CORE,
+    "Kraken>Bork>LDR": _LDR_CORE,
+    "Kraken>Bork>Terminus+Gunmetal": _TERMINUS_CORE + (gunmetal_greaves.ITEM,),
+    "Kraken>Bork>LDR+Gunmetal": _LDR_CORE + (gunmetal_greaves.ITEM,),
 }
 
-# Fixed colour per build so a build keeps its identity across every panel.
+CORE_BUILDS = ("Kraken>Bork>Terminus", "Kraken>Bork>LDR")
+BOOTS_BUILDS = (
+    "Kraken>Bork>Terminus",
+    "Kraken>Bork>Terminus+Gunmetal",
+    "Kraken>Bork>LDR",
+    "Kraken>Bork>LDR+Gunmetal",
+)
+
+COMBOS = (
+    ComboSpec("on-hit", "onhit", ("E", "AA", "P", "Q", "E", "AA", "P"), CORE_BUILDS),
+    ComboSpec("E>Q>P>R", "eqpr", ("E", "Q", "P", "R"), BOOTS_BUILDS),
+)
+
+# Fixed colour per build so a build keeps its identity across every panel. Each
+# core and its boots variant share a hue family so the pairs read together.
 BUILD_COLORS = {
     "Kraken>Bork>Terminus": "tab:green",
+    "Kraken>Bork>Terminus+Gunmetal": "tab:olive",
     "Kraken>Bork>LDR": "tab:orange",
+    "Kraken>Bork>LDR+Gunmetal": "tab:red",
 }
 assert (
     BUILD_COLORS.keys() == ITEM_SETS.keys()
 ), f"BUILD_COLORS must cover exactly ITEM_SETS, got {BUILD_COLORS.keys() ^ ITEM_SETS.keys()}"
+for _spec in COMBOS:
+    assert set(_spec.builds) <= ITEM_SETS.keys(), (
+        f"combo {_spec.slug!r} names builds outside ITEM_SETS: "
+        f"{set(_spec.builds) - ITEM_SETS.keys()}"
+    )
 
 # Death Lotus tick chart: the dagger's own damage on the bottom split by damage
 # type, then the on-hit procs above it. Orange is physical and blue is magic, which
@@ -202,42 +233,16 @@ def resolve_step(step: str, build: Build, conq_stacks: int) -> tuple[Hit, ...]:
     )
 
 
-def _target(
-    short: str,
-    detail: str,
-    base_hp: float,
-    base_ar: float,
-    base_mr: float,
-    level: int,
-    items: tuple[Item, ...],
-    *,
-    hp_shard: bool = True,
-) -> Target:
-    """Build a Target by summing the item fields the target actually carries."""
-    bonus_hp = (runes.scaling_hp_shard(level) if hp_shard else 0.0) + sum(
-        it.hp for it in items
-    )
-    return Target(
-        name=f"{short} ({detail})",
-        short=short,
-        max_hp=base_hp + bonus_hp,
-        bonus_hp=bonus_hp,
-        armor=base_ar + sum(it.armor for it in items),
-        mr=base_mr + sum(it.mr for it in items),
-        plating=plated_steelcaps.ITEM in items,
-    )
-
-
 def target_morde() -> Target:
     level = 18
-    return _target(
-        f"Morde L{level}",
-        "HP shard + Doran's Ring + Rylai's + Riftmaker + Steelcaps + Liandry's",
-        stat_at_level(mordekaiser.STATS.hp, level),
-        stat_at_level(mordekaiser.STATS.ar, level),
-        stat_at_level(mordekaiser.STATS.mr, level),
-        level,
-        (
+    return make_target(
+        short=f"Morde L{level}",
+        detail="HP shard + Doran's Ring + Rylai's + Riftmaker + Steelcaps + Liandry's",
+        level=level,
+        base_hp=stat_at_level(mordekaiser.STATS.hp, level),
+        base_ar=stat_at_level(mordekaiser.STATS.ar, level),
+        base_mr=stat_at_level(mordekaiser.STATS.mr, level),
+        items=(
             dorans_ring.ITEM,
             rylais_crystal_scepter.ITEM,
             riftmaker.ITEM,
@@ -249,28 +254,26 @@ def target_morde() -> Target:
 
 def target_viktor() -> Target:
     level = 16
-    return _target(
-        f"Viktor L{level}",
-        "HP shard + Doran's Ring + Liandry's + Zhonya's",
-        stat_at_level(viktor.STATS.hp, level),
-        stat_at_level(viktor.STATS.ar, level),
-        stat_at_level(viktor.STATS.mr, level),
-        level,
-        (dorans_ring.ITEM, liandrys_torment.ITEM, zhonyas_hourglass.ITEM),
+    return make_target(
+        short=f"Viktor L{level}",
+        detail="HP shard + Doran's Ring + Liandry's + Zhonya's",
+        level=level,
+        base_hp=stat_at_level(viktor.STATS.hp, level),
+        base_ar=stat_at_level(viktor.STATS.ar, level),
+        base_mr=stat_at_level(viktor.STATS.mr, level),
+        items=(dorans_ring.ITEM, liandrys_torment.ITEM, zhonyas_hourglass.ITEM),
     )
 
 
 def target_caitlyn() -> Target:
     level = 14
-    return _target(
-        f"Caitlyn L{level}",
-        "no bonus HP, base resists",
-        stat_at_level(caitlyn.STATS.hp, level),
-        stat_at_level(caitlyn.STATS.ar, level),
-        stat_at_level(caitlyn.STATS.mr, level),
-        level,
-        (),
-        hp_shard=False,
+    return make_target(
+        short=f"Caitlyn L{level}",
+        detail="HP shard, no items",
+        level=level,
+        base_hp=stat_at_level(caitlyn.STATS.hp, level),
+        base_ar=stat_at_level(caitlyn.STATS.ar, level),
+        base_mr=stat_at_level(caitlyn.STATS.mr, level),
     )
 
 
@@ -294,15 +297,9 @@ def result_outcome(spec: ComboSpec, result: ComboResult) -> str:
     return f"KILL on {result.killed_on_step}/{len(spec.steps)} ({step})"
 
 
-def rank_key(result: ComboResult) -> tuple[int, int, float, float]:
-    """Kills first (fewest steps, then most headroom), then by damage dealt."""
-    killed = result.killed_on_step is not None
-    return int(killed), -result.steps_used, result.dealt, result.overkill
-
-
 def print_table(spec: ComboSpec, target: Target, pct: float) -> None:
     results = sorted(
-        (run(spec, name, target, pct) for name in ITEM_SETS),
+        (run(spec, name, target, pct) for name in spec.builds),
         key=rank_key,
         reverse=True,
     )
@@ -314,12 +311,12 @@ def print_table(spec: ComboSpec, target: Target, pct: float) -> None:
         f"AR {target.armor:.1f}  MR {target.mr:.1f}"
     )
     print(
-        f"{'build':22s}  {'dealt':>8s}  {'%HP':>6s}  {'overkill':>8s}  "
+        f"{'build':30s}  {'dealt':>8s}  {'%HP':>6s}  {'overkill':>8s}  "
         f"{'outcome':26s}  {'gold':>5s}"
     )
     for r in results:
         print(
-            f"{r.build:22s}  {r.dealt:8.1f}  {r.dealt / start_hp * 100:5.1f}%  "
+            f"{r.build:30s}  {r.dealt:8.1f}  {r.dealt / start_hp * 100:5.1f}%  "
             f"{r.overkill:8.1f}  {result_outcome(spec, r):26s}  {r.cost:5d}"
         )
 
@@ -361,7 +358,7 @@ def main() -> None:
             out = charts.plot_trajectory_grid(
                 targets=targets,
                 start_hp_pcts=START_HP_PCTS,
-                build_names=tuple(ITEM_SETS),
+                build_names=spec.builds,
                 build_colors=BUILD_COLORS,
                 run=lambda name, target, pct, _s=spec: run(_s, name, target, pct),
                 combo=spec.steps,
@@ -381,7 +378,7 @@ def main() -> None:
         r_step_no = channel.steps.index("R") + 1
         out = charts.plot_hit_ticks(
             targets=targets,
-            build_names=tuple(ITEM_SETS),
+            build_names=channel.builds,
             run=lambda name, target: run(channel, name, target, 100.0),
             step_no=r_step_no,
             step_label="Death Lotus dagger",

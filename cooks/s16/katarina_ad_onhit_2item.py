@@ -33,7 +33,16 @@ from cooked_lol.systems.midlane_quest import quest_ap, quest_bonus_ad
 from cooked_lol.systems.systems import SpellRank, stat_at_level
 from cooked_lol.types.item import Item
 from cooks import charts, config
-from cooks.combo_sim import Build, ComboResult, Hit, Target, make_build, simulate
+from cooks.combo_sim import (
+    Build,
+    ComboResult,
+    Hit,
+    Target,
+    make_build,
+    make_target,
+    rank_key,
+    simulate,
+)
 
 KAT_LEVEL = 12
 Q_RANK: SpellRank = 5
@@ -120,54 +129,44 @@ def resolve_step(step: str, build: Build, conq_stacks: int) -> tuple[Hit, ...]:
 
 def target_viktor() -> Target:
     level = 12
-    bonus_hp = (
-        runes.scaling_hp_shard(level) + dorans_ring.ITEM.hp + liandrys_torment.ITEM.hp
-    )
-    return Target(
-        name=f"Viktor L{level} (HP shard + Doran's Ring + Liandry's)",
+    return make_target(
         short=f"Viktor L{level}",
-        max_hp=stat_at_level(viktor.STATS.hp, level) + bonus_hp,
-        bonus_hp=bonus_hp,
-        armor=stat_at_level(viktor.STATS.ar, level),
-        mr=stat_at_level(viktor.STATS.mr, level),
-        plating=False,
+        detail="HP shard + Doran's Ring + Liandry's",
+        level=level,
+        base_hp=stat_at_level(viktor.STATS.hp, level),
+        base_ar=stat_at_level(viktor.STATS.ar, level),
+        base_mr=stat_at_level(viktor.STATS.mr, level),
+        items=(dorans_ring.ITEM, liandrys_torment.ITEM),
     )
 
 
 def target_caitlyn() -> Target:
     level = 11
-    return Target(
-        name=f"Caitlyn L{level} (no bonus HP)",
+    return make_target(
         short=f"Caitlyn L{level}",
-        max_hp=stat_at_level(caitlyn.STATS.hp, level),
-        bonus_hp=0.0,
-        armor=stat_at_level(caitlyn.STATS.ar, level),
-        mr=stat_at_level(caitlyn.STATS.mr, level),
-        plating=False,
+        detail="HP shard, no items",
+        level=level,
+        base_hp=stat_at_level(caitlyn.STATS.hp, level),
+        base_ar=stat_at_level(caitlyn.STATS.ar, level),
+        base_mr=stat_at_level(caitlyn.STATS.mr, level),
     )
 
 
 def target_mordekaiser() -> Target:
     level = 14
-    bonus_hp = (
-        runes.scaling_hp_shard(level)
-        + dorans_ring.ITEM.hp
-        + rylais_crystal_scepter.ITEM.hp
-        + riftmaker.ITEM.hp
-    )
-    return Target(
-        name=(
-            f"Morde L{level} (HP shard + Doran's Ring + Rylai's + "
-            f"Riftmaker + Steelcaps)"
-        ),
+    return make_target(
         short=f"Morde L{level}",
-        max_hp=stat_at_level(mordekaiser.STATS.hp, level) + bonus_hp,
-        bonus_hp=bonus_hp,
-        armor=(
-            stat_at_level(mordekaiser.STATS.ar, level) + plated_steelcaps.ITEM.armor
+        detail="HP shard + Doran's Ring + Rylai's + Riftmaker + Steelcaps",
+        level=level,
+        base_hp=stat_at_level(mordekaiser.STATS.hp, level),
+        base_ar=stat_at_level(mordekaiser.STATS.ar, level),
+        base_mr=stat_at_level(mordekaiser.STATS.mr, level),
+        items=(
+            dorans_ring.ITEM,
+            rylais_crystal_scepter.ITEM,
+            riftmaker.ITEM,
+            plated_steelcaps.ITEM,
         ),
-        mr=stat_at_level(mordekaiser.STATS.mr, level),
-        plating=True,
     )
 
 
@@ -189,12 +188,6 @@ def result_outcome(result: ComboResult) -> str:
         return f"survives, {result.hp_left:.1f} HP left"
     step = COMBO[result.killed_on_step - 1]
     return f"KILL on {result.killed_on_step}/{len(COMBO)} ({step})"
-
-
-def rank_key(result: ComboResult) -> tuple[int, int, float, float]:
-    """Kills first (fewest steps, then most headroom), then by damage dealt."""
-    killed = result.killed_on_step is not None
-    return int(killed), -result.steps_used, result.dealt, result.overkill
 
 
 def print_table(target: Target, start_hp_pct: float = 100.0) -> None:

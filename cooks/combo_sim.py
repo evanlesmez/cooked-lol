@@ -24,7 +24,7 @@ from cooked_lol.items import (
     plated_steelcaps,
     terminus,
 )
-from cooked_lol.runes import conqueror
+from cooked_lol.runes import conqueror, runes
 from cooked_lol.systems.systems import post_mitigation_damage
 from cooked_lol.types.item import Item
 
@@ -125,8 +125,46 @@ class ComboResult(NamedTuple):
     hits: tuple[HitLog, ...]
 
 
-def target_bonus_hp(items: tuple[Item, ...], shard_hp: float = 0.0) -> float:
-    return shard_hp + sum(it.hp for it in items)
+def rank_key(result: ComboResult) -> tuple[int, int, float, float]:
+    """Sort key, best first under `reverse=True`.
+
+    Kills first, then fewest steps, then most headroom, then most damage.
+
+    `overkill` deliberately outranks `dealt`: on a kill every build has dealt
+    exactly the target's starting HP, so `dealt` carries no information and its
+    float-accumulation noise (~1e-12) would otherwise decide the order. On a
+    survival `overkill` is zero for everyone, so `dealt` breaks the tie instead.
+    """
+    killed = result.killed_on_step is not None
+    return int(killed), -result.steps_used, result.overkill, result.dealt
+
+
+def make_target(
+    *,
+    short: str,
+    detail: str,
+    level: int,
+    base_hp: float,
+    base_ar: float,
+    base_mr: float,
+    items: tuple[Item, ...] = (),
+) -> Target:
+    """Build a Target by summing the item fields the target actually carries.
+
+    Every target is assumed to run the scaling health shard, so bonus HP is never
+    zero. Keeping this in one place is deliberate: hand-rolling each target is how
+    the cooks previously drifted into three different Caitlyns.
+    """
+    bonus_hp = runes.scaling_hp_shard(level) + sum(it.hp for it in items)
+    return Target(
+        name=f"{short} ({detail})",
+        short=short,
+        max_hp=base_hp + bonus_hp,
+        bonus_hp=bonus_hp,
+        armor=base_ar + sum(it.armor for it in items),
+        mr=base_mr + sum(it.mr for it in items),
+        plating=plated_steelcaps.ITEM in items,
+    )
 
 
 def make_build(
